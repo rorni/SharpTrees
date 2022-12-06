@@ -45,9 +45,18 @@ namespace SharpTrees
 
         internal int DimNumber { get => bounds.Length; }
 
-        internal Rectangle(uint ndim)
+        internal Rectangle(int ndim)
         {
             bounds = new Bounds[ndim];
+        }
+
+        internal Rectangle(params Bounds[] bounds)
+        {
+            this.bounds = new Bounds[bounds.Length];
+            for (int i = 0; i < bounds.Length; ++i)
+            {
+                this.bounds[i] = bounds[i];
+            }
         }
 
         internal Bounds GetBounds(int dim)
