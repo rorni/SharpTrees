@@ -85,6 +85,22 @@ namespace SharpTrees
         internal int DimNumber { get => bounds.Length; }
 
         /// <summary>
+        /// Total area of the rectangle.
+        /// </summary>
+        internal double Area
+        {
+            get
+            {
+                double area = 1.0;
+                for (int i = 0; i < DimNumber; ++i)
+                {
+                    area *= bounds[i].Length;
+                }
+                return area;
+            }
+        }
+
+        /// <summary>
         /// Creates uninitialized rectangle with specific number of dimensions.
         /// </summary>
         /// <param name="ndim">The number of dimensions.</param>
@@ -144,20 +160,22 @@ namespace SharpTrees
         }
 
         /// <summary>
-        /// Gets the volume of the intersection of the rectangle with the other.
+        /// Gets the area of the intersection of the rectangle with the other.
         /// </summary>
         /// <param name="other">Other rectangle.</param>
-        /// <returns>The volume of common part. Zero, if rectangles do not overlap.</returns>
-        internal double GetOverlappingVolume(Rectangle other)
+        /// <returns>The area of common part. Zero, if rectangles do not overlap.</returns>
+        internal double GetOverlappingArea(Rectangle other)
         {
             if (DimNumber != other.DimNumber) throw new ArgumentException("Dimension of rectangles do not match.");
-            double volume = 1.0;
+            double area = 1.0;
             for (int i = 0; i < DimNumber; ++i)
             {
-                volume *= bounds[i].GetOverlappingLength(other.GetBounds(i));
+                area *= bounds[i].GetOverlappingLength(other.GetBounds(i));
             }
-            return volume;
+            return area;
         }
+
+        
 
     }
 

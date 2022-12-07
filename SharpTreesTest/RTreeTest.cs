@@ -163,12 +163,27 @@ namespace SharpTreesTest
         [DataRow(3, 5, 0)]
         [DataRow(4, 5, 0)]
         [DataRow(6, 7, 9)]
-        public void TestGetOverlappingVolume(int i1, int i2, double result)
+        public void TestGetOverlappingArea(int i1, int i2, double result)
         {
             Rectangle rect1 = GetRectangle(i1);
             Rectangle rect2 = GetRectangle(i2);
-            Assert.AreEqual(result, rect1.GetOverlappingVolume(rect2), 1.0e-10);
-            Assert.AreEqual(result, rect2.GetOverlappingVolume(rect1), 1.0e-10);
+            Assert.AreEqual(result, rect1.GetOverlappingArea(rect2), 1.0e-10);
+            Assert.AreEqual(result, rect2.GetOverlappingArea(rect1), 1.0e-10);
+        }
+
+        [TestMethod]
+        [DataRow(0, 36)]
+        [DataRow(1, 12)]
+        [DataRow(2, 6)]
+        [DataRow(3, 6)]
+        [DataRow(4, 9)]
+        [DataRow(5, 60)]
+        [DataRow(6, 54)]
+        [DataRow(7, 18)]
+        public void TestRectangleArea(int i, double area)
+        {
+            Rectangle rect = GetRectangle(i);
+            Assert.AreEqual(area, rect.Area, 1.0e-10);
         }
 
         private List<Rectangle> rectangles = null;
