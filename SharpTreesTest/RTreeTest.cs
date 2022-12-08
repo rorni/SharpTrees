@@ -69,6 +69,20 @@ namespace SharpTreesTest
             Assert.AreEqual(result, bounds1.GetOverlappingLength(bounds2), 1.0e-10);
             Assert.AreEqual(result, bounds2.GetOverlappingLength(bounds1), 1.0e-10);
         }
+
+        [TestMethod]
+        [DataRow(-1, 3, 0, 2, -1, 3)]
+        [DataRow(-1, 3, 2, 4, -1, 4)]
+        [DataRow(-1, 3, 4, 5, -1, 5)]
+        [DataRow(-5, -1, 1, 5, -5, 5)]
+        public void TestMerge(double min1, double max1, double min2, double max2, double minr, double maxr)
+        {
+            Bounds bounds1 = new Bounds(min1, max1);
+            Bounds bounds2 = new Bounds(min2, max2);
+            Bounds result = bounds1.Merge(bounds2);
+            Assert.AreEqual(minr, result.Min, 1.0e-10);
+            Assert.AreEqual(maxr, result.Max, 1.0e-10);
+        }
     }
 
     [TestClass]
@@ -183,6 +197,33 @@ namespace SharpTreesTest
         public void TestRectangleArea(int i, double area)
         {
             Rectangle rect = GetRectangle(i);
+            Assert.AreEqual(area, rect.Area, 1.0e-10);
+        }
+
+        [TestMethod]
+        [DataRow(0, 1, 36)]
+        [DataRow(0, 2, 72)]
+        [DataRow(0, 3, 60)]
+        [DataRow(0, 4, 60)]
+        [DataRow(0, 5, 180)]
+        [DataRow(1, 2, 50)]
+        [DataRow(1, 3, 54)]
+        [DataRow(1, 4, 40)]
+        [DataRow(1, 5, 120)]
+        [DataRow(2, 3, 91)]
+        [DataRow(2, 4, 40)]
+        [DataRow(2, 5, 200)]
+        [DataRow(3, 4, 77)]
+        [DataRow(3, 5, 120)]
+        [DataRow(4, 5, 160)]
+        [DataRow(6, 7, 80)]
+        public void TestRectangleMerge(int i1, int i2, double area)
+        {
+            Rectangle rect1 = GetRectangle(i1);
+            Rectangle rect2 = GetRectangle(i2);
+            Rectangle rect = rect1.Merge(rect2);
+            Assert.AreEqual(area, rect.Area, 1.0e-10);
+            rect = rect2.Merge(rect1);
             Assert.AreEqual(area, rect.Area, 1.0e-10);
         }
 

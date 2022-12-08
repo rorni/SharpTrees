@@ -66,13 +66,25 @@ namespace SharpTrees
             double upper = Math.Min(Max, other.Max);
             return Math.Max(0, upper - lower);
         }
+
+        /// <summary>
+        /// Gets Bounds that include both this one and other bounds.
+        /// </summary>
+        /// <param name="other">Other bounds.</param>
+        /// <returns>Wide bounds.</returns>
+        internal Bounds Merge(Bounds other)
+        {
+            double lower = Math.Min(Min, other.Min);
+            double upper = Math.Max(Max, other.Max);
+            return new Bounds(lower, upper);
+        }
     }
 
     /// <summary>
     /// Represents rectangle in multidimensional space. Rectangle sides are
     /// parallel to axes.
     /// </summary>
-    internal struct Rectangle
+    internal class Rectangle
     {
         /// <summary>
         /// Array of bounds of the rectangle in each dimension.
@@ -175,7 +187,20 @@ namespace SharpTrees
             return area;
         }
 
-        
+        /// <summary>
+        /// Creates new extended rectangle that includes both this one and the other.
+        /// </summary>
+        /// <param name="other">Other rectangle.</param>
+        /// <returns>Extended rectangle.</returns>
+        internal Rectangle Merge(Rectangle other)
+        {
+            Bounds[] new_bounds = new Bounds[DimNumber];
+            for (int i = 0; i < DimNumber; ++i)
+            {
+                new_bounds[i] = bounds[i].Merge(other.GetBounds(i));
+            }
+            return new Rectangle(new_bounds);
+        }
 
     }
 
