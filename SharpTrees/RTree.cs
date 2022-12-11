@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace SharpTrees
 {
-    public class IncorrectBoundsException : Exception { 
+    public class IncorrectBoundsException : Exception {
         public IncorrectBoundsException(string message) : base(message) { }
     }
 
     /// <summary>
     /// Represents bounds in one direction.
     /// </summary>
-    internal struct Bounds
+    public struct Bounds
     {
         /// <summary>
         /// Gets lower bound.
@@ -204,8 +204,284 @@ namespace SharpTrees
 
     }
 
-    public class RTree
+    public interface IBounded
     {
+        Bounds[] GetBounds();
+        bool IsEqual(IBounded other);
+    }
 
+    public class RTree<T> where T : IBounded
+    {
+        private Node root;
+
+        private uint MaxEntries { get; }
+        private uint MinEntries { get; }
+
+        public RTree(byte maxEntries, byte minEntries)
+        {
+            MaxEntries = maxEntries;
+            MinEntries = minEntries;
+            root = new LeafNode(MaxEntries, MinEntries);
+        }
+
+        /// <summary>
+        /// Searches for items that cross the rectangle. 
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public ICollection<T> SearchIntersections(Bounds[] bounds)
+        {
+            Rectangle targetRectangle = new Rectangle(bounds);
+            ICollection<LeafEntry> entryResult = new List<LeafEntry>();
+            root.SearchIntersections(targetRectangle, entryResult);
+            ICollection<T> result = new List<T>();
+            foreach (var entry in entryResult) result.Add((T)entry.DataItem);
+            return result;
+        }
+
+        /// <summary>
+        /// Searchs for the specified item.
+        /// </summary>
+        /// <param name="target">Target object.</param>
+        /// <param name="found">Found object</param>
+        /// <returns>True, if target object was found, false otherwise.</returns>
+        public bool Search(T target, out T found)
+        {
+            LeafEntry entry = new LeafEntry(target);
+            LeafEntry foundEntry = root.Search(entry);
+            bool result = false;
+            if (foundEntry != null)
+            {
+                found = (T)foundEntry.DataItem;
+                result = true;
+            } else
+            {
+                found = target;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Deletes item from the RTree.
+        /// </summary>
+        /// <param name="target">Item to be deleted.</param>
+        /// <returns>If the item was deleted the item is returned.
+        /// null if RTree does not contain such item.</returns>
+        public T Delete(T target)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Adds new item to the RTree.
+        /// </summary>
+        /// <param name="item">Item to be inserted.</param>
+        public void Add(T item)
+        {
+            throw new NotImplementedException();
+        }
+
+    }
+
+
+    internal abstract class Node
+    {
+        protected uint MaxEntries { get; }
+        protected uint MinEntries { get; }
+
+        protected Node(uint maxEntries, uint minEntries)
+        {
+            MaxEntries = maxEntries;
+            MinEntries = minEntries;
+        }
+
+
+        internal abstract void SearchIntersections(Rectangle target, ICollection<LeafEntry> foundObjects);
+        internal abstract LeafEntry Search(LeafEntry target);
+
+        internal abstract Node AddItem(LeafEntry target);
+
+        internal abstract void AdjustRectangles();
+
+        internal abstract Rectangle GetRectangle();
+
+        protected void SplitNode<T>(List<T> entries, out List<T> otherGroup) where T : Entry
+        {
+            throw new NotImplementedException();
+        }
+
+        protected static List<T> FindIntersectingEntries<T>(Rectangle target, List<T> entries) where T : Entry
+        {
+            SortedDictionary<double, T> data = new SortedDictionary<double, T>(new AreaDescendingComparer());
+            foreach (T entry in entries)
+            {
+                double area = entry.Rectangle.GetOverlappingArea(target);
+                if (area > 0)
+                {
+                    data.Add(area, entry);
+                }
+            }
+            return data.Values.ToList();
+        }
+
+        protected static Rectangle GetRectangle<T>(List<T> entries) where T : Entry
+        {
+            Rectangle result = entries[0].Rectangle;
+            for (int i = 1; i < entries.Count; ++i)
+            {
+                result = result.Merge(entries[i].Rectangle);
+            }
+            return result;
+        }
+    }
+
+    internal class LeafNode : Node
+    {
+        private List<LeafEntry> entries;
+
+        internal LeafNode(uint maxEntries, uint minEntries) : this(maxEntries, minEntries, new List<LeafEntry>())
+        { }
+
+        protected LeafNode(uint maxEntries, uint minEntries, List<LeafEntry> entries) : base(maxEntries, minEntries)
+        {
+            this.entries = entries;
+        }
+
+        internal override LeafEntry Search(LeafEntry target)
+        {
+            List<LeafEntry> candidates = FindIntersectingEntries<LeafEntry>(target.Rectangle, entries);
+            foreach (LeafEntry entry in candidates)
+            {
+                if (entry.DataItem.IsEqual(target.DataItem)) return entry;
+            }
+            return null;
+        }
+
+        internal override void SearchIntersections(Rectangle target, ICollection<LeafEntry> foundObjects)
+        {
+            List<LeafEntry> candidates = FindIntersectingEntries<LeafEntry>(target, entries);
+            foreach (LeafEntry entry in candidates)
+            {
+                foundObjects.Add(entry);
+            }
+        }
+
+        internal override void AdjustRectangles() { }
+
+        internal override Rectangle GetRectangle()
+        {
+            return GetRectangle(entries);
+        }
+
+        internal override Node AddItem(LeafEntry target)
+        {
+            entries.Add(target);
+            if (entries.Count > MaxEntries)
+            {
+                SplitNode(entries, out List<LeafEntry> other);
+                return new LeafNode(MaxEntries, MinEntries, other);
+            }
+            return null;
+        }
+    }
+
+    internal class NonLeafNode : Node
+    {
+        private List<NodeEntry> entries;
+
+        internal NonLeafNode(uint maxEntries, uint minEntries) : this(maxEntries, minEntries, new List<NodeEntry>())
+        { }
+
+        private NonLeafNode(uint maxEntries, uint minEntries, List<NodeEntry> entries) : base(maxEntries, minEntries)
+        {
+            this.entries = entries;
+        }
+
+        internal override LeafEntry Search(LeafEntry target)
+        {
+            LeafEntry result = null;
+            List<NodeEntry> candidates = FindIntersectingEntries<NodeEntry>(target.Rectangle, entries);
+            foreach (NodeEntry entry in candidates)
+            {
+                result = entry.Node.Search(target);
+                if (result != null) break;
+            }
+            return result;
+        }
+
+        internal override void SearchIntersections(Rectangle target, ICollection<LeafEntry> foundObjects)
+        {
+            List<NodeEntry> candidates = FindIntersectingEntries<NodeEntry>(target, entries);
+            foreach (NodeEntry entry in candidates)
+            {
+                entry.Node.SearchIntersections(target, foundObjects);
+            }
+        }
+
+        internal override void AdjustRectangles()
+        {
+            foreach (NodeEntry entry in entries)
+            {
+                entry.Node.AdjustRectangles();
+                entry.Rectangle = entry.Node.GetRectangle();
+            }
+        }
+
+        internal override Rectangle GetRectangle()
+        {
+            return GetRectangle(entries);
+        }
+
+        internal override Node AddItem(LeafEntry target)
+        {
+            // Find best node
+            int i = 0;
+            Node afterSplit = entries[i].Node.AddItem(target);
+            if (afterSplit != null)
+            {
+                entries.Add(new NodeEntry(afterSplit));
+                if (entries.Count > MaxEntries)
+                {
+                    SplitNode(entries, out List<NodeEntry> other);
+                    return new NonLeafNode(MaxEntries, MinEntries, other);
+                }
+            }
+            return null;
+        }
+    }
+
+    internal abstract class Entry
+    {
+        internal Rectangle Rectangle { get; set; }
+    }
+
+    internal class LeafEntry : Entry
+    {
+        internal IBounded DataItem { get; }
+
+        internal LeafEntry(IBounded dataItem)
+        {
+            DataItem = dataItem;
+            Rectangle = new Rectangle(dataItem.GetBounds());
+        }
+    }
+
+    internal class NodeEntry : Entry
+    {
+        internal Node Node { get; set; }
+
+        internal NodeEntry(Node node)
+        {
+            Node = node;
+            Rectangle = node.GetRectangle();
+        }
+    }
+
+    internal class AreaDescendingComparer : IComparer<double>
+    {
+        public int Compare(double x, double y)
+        {
+            return Compare(y, x);
+        }
     }
 }
