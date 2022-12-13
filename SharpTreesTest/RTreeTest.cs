@@ -265,4 +265,134 @@ namespace SharpTreesTest
             return rectangles[i];
         }
     }
+
+    [TestClass]
+    public class GroupSplitIndexProducerTest
+    {
+        private class TestCase
+        {
+            public List<int[]> group1 = new List<int[]>();
+            public List<int[]> group2 = new List<int[]>();
+
+            public TestCase(uint N, uint m)
+            {
+                if (N == 4 && m == 2) Create4_2();
+                else if (N == 5 && m == 2) Create5_2();
+                else if (N == 6 && m == 2) Create6_2();
+                else if (N == 6 && m == 3) Create6_3();
+            }
+
+            private void Create4_2()
+            {
+                group1.Add(new int[] { 0, 1 });
+                group1.Add(new int[] { 0, 2 });
+                group1.Add(new int[] { 0, 3 });
+                group2.Add(new int[] { 2, 3 });
+                group2.Add(new int[] { 1, 3 });
+                group2.Add(new int[] { 1, 2 });
+            }
+
+            private void Create5_2()
+            {
+                group1.Add(new int[] { 0, 1 });
+                group1.Add(new int[] { 0, 2 });
+                group1.Add(new int[] { 0, 3 });
+                group1.Add(new int[] { 0, 4 });
+                group1.Add(new int[] { 1, 2 });
+                group1.Add(new int[] { 1, 3 });
+                group1.Add(new int[] { 1, 4 });
+                group1.Add(new int[] { 2, 3 });
+                group1.Add(new int[] { 2, 4 });
+                group1.Add(new int[] { 3, 4 });
+                group2.Add(new int[] { 2, 3, 4 });
+                group2.Add(new int[] { 1, 3, 4 });
+                group2.Add(new int[] { 1, 2, 4 });
+                group2.Add(new int[] { 1, 2, 3 });
+                group2.Add(new int[] { 0, 3, 4 });
+                group2.Add(new int[] { 0, 2, 4 });
+                group2.Add(new int[] { 0, 2, 3 });
+                group2.Add(new int[] { 0, 1, 4 });
+                group2.Add(new int[] { 0, 1, 3 });
+                group2.Add(new int[] { 0, 1, 2 });
+            }
+
+            private void Create6_2()
+            {
+                group1.Add(new int[] { 0, 1 });
+                group1.Add(new int[] { 0, 2 });
+                group1.Add(new int[] { 0, 3 });
+                group1.Add(new int[] { 0, 4 });
+                group1.Add(new int[] { 0, 5 });
+                group1.Add(new int[] { 1, 2 });
+                group1.Add(new int[] { 1, 3 });
+                group1.Add(new int[] { 1, 4 });
+                group1.Add(new int[] { 1, 5 });
+                group1.Add(new int[] { 2, 3 });
+                group1.Add(new int[] { 2, 4 });
+                group1.Add(new int[] { 2, 5 });
+                group1.Add(new int[] { 3, 4 });
+                group1.Add(new int[] { 3, 5 });
+                group1.Add(new int[] { 4, 5 });
+                group2.Add(new int[] { 2, 3, 4, 5 });
+                group2.Add(new int[] { 1, 3, 4, 5 });
+                group2.Add(new int[] { 1, 2, 4, 5 });
+                group2.Add(new int[] { 1, 2, 3, 5 });
+                group2.Add(new int[] { 1, 2, 3, 4 });
+                group2.Add(new int[] { 0, 3, 4, 5 });
+                group2.Add(new int[] { 0, 2, 4, 5 });
+                group2.Add(new int[] { 0, 2, 3, 5 });
+                group2.Add(new int[] { 0, 2, 3, 4 });
+                group2.Add(new int[] { 0, 1, 4, 5 });
+                group2.Add(new int[] { 0, 1, 3, 5 });
+                group2.Add(new int[] { 0, 1, 3, 4 });
+                group2.Add(new int[] { 0, 1, 2, 5 });
+                group2.Add(new int[] { 0, 1, 2, 4 });
+                group2.Add(new int[] { 0, 1, 2, 3 });
+            }
+            private void Create6_3()
+            {
+                group1.Add(new int[] { 0, 1, 2 });
+                group1.Add(new int[] { 0, 1, 3 });
+                group1.Add(new int[] { 0, 1, 4 });
+                group1.Add(new int[] { 0, 1, 5 });
+                group1.Add(new int[] { 0, 2, 3 });
+                group1.Add(new int[] { 0, 2, 4 });
+                group1.Add(new int[] { 0, 2, 5 });
+                group1.Add(new int[] { 0, 3, 4 });
+                group1.Add(new int[] { 0, 3, 5 });
+                group1.Add(new int[] { 0, 4, 5 });
+
+                group2.Add(new int[] { 3, 4, 5 });
+                group2.Add(new int[] { 2, 4, 5 });
+                group2.Add(new int[] { 2, 3, 5 });
+                group2.Add(new int[] { 2, 3, 4 });
+                group2.Add(new int[] { 1, 4, 5 });
+                group2.Add(new int[] { 1, 3, 5 });
+                group2.Add(new int[] { 1, 3, 4 });
+                group2.Add(new int[] { 1, 2, 5 });
+                group2.Add(new int[] { 1, 2, 4 });
+                group2.Add(new int[] { 1, 2, 3 });
+            }
+        }
+
+
+        [TestMethod]
+        [DataRow((uint)4, (uint)2, 3)]
+        [DataRow((uint)5, (uint)2, 10)]
+        [DataRow((uint)6, (uint)2, 15)]
+        [DataRow((uint)6, (uint)3, 10)]
+        public void TestIndexProducer(uint N, uint m, int casenum)
+        {
+            GroupSplitIndexProducer producer = new GroupSplitIndexProducer(N, m);
+            TestCase answer = new TestCase(N, m);
+            for (int i = 0; i < casenum; ++i)
+            {
+                CollectionAssert.AreEqual(answer.group1[i], producer.group1);
+                CollectionAssert.AreEqual(answer.group2[i], producer.group2);
+                bool next = producer.Next();
+                if (i != casenum - 1) Assert.IsTrue(next);
+                else Assert.IsFalse(next);
+            }
+        }
+    }
 }

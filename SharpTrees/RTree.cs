@@ -305,7 +305,7 @@ namespace SharpTrees
 
         internal abstract Rectangle GetRectangle();
 
-        protected void SplitNode<T>(List<T> entries, out List<T> otherGroup) where T : Entry
+        protected static List<T> SplitNode<T>(List<T> entries) where T : Entry
         {
             throw new NotImplementedException();
         }
@@ -378,7 +378,7 @@ namespace SharpTrees
             entries.Add(target);
             if (entries.Count > MaxEntries)
             {
-                SplitNode(entries, out List<LeafEntry> other);
+                List<LeafEntry> other = SplitNode(entries);
                 return new LeafNode(MaxEntries, MinEntries, other);
             }
             return null;
@@ -442,7 +442,7 @@ namespace SharpTrees
                 entries.Add(new NodeEntry(afterSplit));
                 if (entries.Count > MaxEntries)
                 {
-                    SplitNode(entries, out List<NodeEntry> other);
+                    List<NodeEntry> other = SplitNode(entries);
                     return new NonLeafNode(MaxEntries, MinEntries, other);
                 }
             }
@@ -482,6 +482,179 @@ namespace SharpTrees
         public int Compare(double x, double y)
         {
             return Compare(y, x);
+        }
+    }
+
+    public enum NodeSplitStrategy
+    {
+        Exhaustive, Quadratic, Linear
+    }
+
+    internal abstract class NodeSplitter
+    {
+        internal uint MinEntries { get; }
+        internal uint MaxEntries { get; }
+
+        internal NodeSplitter(uint minEntries, uint maxEntries)
+        {
+            MinEntries = minEntries;
+            MaxEntries = maxEntries;
+        }
+
+        internal abstract EntrySplit<T> Split<T>(List<T> entries) where T : Entry;
+    }
+
+    internal class EntrySplit<T> where T : Entry
+    {
+        internal List<T> group1;
+        internal List<T> group2;
+
+        internal EntrySplit(List<T> group1, List<T> group2)
+        {
+            this.group1 = group1;
+            this.group2 = group2;
+        }
+    }
+
+    internal class ExhaustiveSlitter : NodeSplitter
+    {
+        internal ExhaustiveSlitter(uint minEntries, uint maxEntries) : base(minEntries, maxEntries) 
+        { }
+
+        internal override EntrySplit<T> Split<T>(List<T> entries)
+        {
+            throw new NotImplementedException();
+        }
+
+        private List<EntrySplit<T>> FillEntrySplitCases<T>(List<T> entries) where T : Entry
+        {
+            List<EntrySplit<T>> result = new List<EntrySplit<T>>();
+            uint m = MinEntries;
+            
+            return result;
+        }
+
+        private void FillEntryGroup<T>(List<T> entries, uint m, List<EntrySplit<T>> groups) where T : Entry
+        {
+            int[] indices = new int[m];
+            for (int i = 0; i < m; ++i) indices[i] = i;
+
+            int c = 0;
+            while (true)
+            {
+                List<T> group1 = new List<T>();
+                List<T> group2 = new List<T>();
+                for (int i = 0; i < entries.Count; ++i)
+                {
+
+                }
+            }
+        }
+    }
+
+    internal class GroupSplitIndexProducer
+    {
+        internal int[] group1;
+        internal int[] group2;
+        private uint N;
+        private int min_index = 0;
+
+        internal GroupSplitIndexProducer(uint N, uint m)
+        {
+            group1 = new int[m];
+            group2 = new int[N - m];
+            if (m * 2 == N) min_index = 1;
+            this.N = N;
+            for (int i = 0; i < m; ++i) group1[i] = i;
+            for (int i = 0; i < N - m; ++i) group2[i] = (int)m + i;
+        }
+
+        internal bool Next()
+        {
+            int i = group1.Length - 1;
+            group1[i] += 1;
+            while (i >= min_index + 1 && group1[i] >= N - (group1.Length - i - 1))
+            {
+                group1[--i] += 1;
+            }
+            if (group1[min_index] == N - (group1.Length - min_index - 1)) return false;
+            else if (i < group1.Length - 1)
+            {
+                while (i < group1.Length - 1)
+                {
+                    group1[i + 1] = group1[i] + 1;
+                    ++i;
+                }
+            }
+            SetGroup2();
+            return true;
+        }
+
+        private void SetGroup2()
+        {
+            int j = 0;
+            int index = 0;
+            for (int i = 0; i < group1.Length; ++i)
+            {
+                while (index < group1[i])
+                {
+                    group2[j++] = index++;
+                }
+                ++index;
+            }
+            for (int i = j; i < group2.Length; ++i) group2[i] = index++;
+        }
+    }
+
+    internal class NodeSplitter2
+    {
+        internal NodeSplitStrategy Strategy { get; }
+
+        internal uint MinEntries { get; }
+        internal uint MaxEntries { get; }
+
+        internal NodeSplitter2(uint minEntries, uint maxEntries, NodeSplitStrategy strategy) {
+            MinEntries = minEntries;
+            MaxEntries = maxEntries;
+            Strategy = strategy;
+        }
+
+        internal List<T> Split<T>(List<T> entries) where T : Entry
+        {
+            if (entries.Count > MaxEntries)
+            {
+                switch (Strategy)
+                {
+                    case NodeSplitStrategy.Exhaustive:
+                        return SplitExhaustive<T>(entries);
+                    case NodeSplitStrategy.Quadratic:
+                        return SplitQuadratic<T>(entries);
+                    case NodeSplitStrategy.Linear:
+                        return SplitLinear<T>(entries);
+                }
+            }
+            return null;
+        }
+
+        private List<T> SplitExhaustive<T>(List<T> entries) where T : Entry
+        {
+            throw new NotImplementedException();
+        }
+
+        private List<T> SplitQuadratic<T>(List<T> entries) where T : Entry
+        {
+            throw new NotImplementedException();
+        }
+
+        private List<T> SplitLinear<T>(List<T> entries) where T : Entry
+        {
+            throw new NotImplementedException();
+        }
+
+        private List<T> SplitRStar<T>(List<T> entries) where T : Entry
+        {
+
+            return null;
         }
     }
 }
