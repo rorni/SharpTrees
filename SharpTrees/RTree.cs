@@ -521,34 +521,59 @@ namespace SharpTrees
         internal ExhaustiveSlitter(uint minEntries, uint maxEntries) : base(minEntries, maxEntries) 
         { }
 
-        internal override EntrySplit<T> Split<T>(List<T> entries)
+        internal override EntrySplit<T> Split<T>(List<T> entries) 
         {
-            throw new NotImplementedException();
+            List<EntrySplit<T>> splitGroups = FillEntrySplitCases(entries);
+            EntrySplit<T> bestCase = splitGroups[0];
+            double smallestArea = CalculateCaseArea(splitGroups[0]);
+            for (int i = 1; i < splitGroups.Count; ++i)
+            {
+                double area = CalculateCaseArea(splitGroups[i]);
+                if (area < smallestArea)
+                {
+                    smallestArea = area;
+                    bestCase = splitGroups[i];
+                }
+            }
+            return bestCase;
+        }
+
+        private static double CalculateCaseArea<T>(EntrySplit<T> splitCase) where T : Entry
+        {
+            double area1 = CalculateGroupArea(splitCase.group1);
+            double area2 = CalculateGroupArea(splitCase.group2);
+            return area1 + area2;
+        }
+
+        private static double CalculateGroupArea<T>(List<T> group) where T : Entry
+        {
+            Rectangle rect = group[0].Rectangle;
+            for (int i = 1; i < group.Count; ++i)
+            {
+                rect.Merge(group[i].Rectangle);
+            }
+            return rect.Area;
         }
 
         private List<EntrySplit<T>> FillEntrySplitCases<T>(List<T> entries) where T : Entry
         {
             List<EntrySplit<T>> result = new List<EntrySplit<T>>();
             uint m = MinEntries;
-            
-            return result;
-        }
-
-        private void FillEntryGroup<T>(List<T> entries, uint m, List<EntrySplit<T>> groups) where T : Entry
-        {
-            int[] indices = new int[m];
-            for (int i = 0; i < m; ++i) indices[i] = i;
-
-            int c = 0;
-            while (true)
+            uint N = (uint)entries.Count;
+            while (2 * m < MaxEntries)
             {
-                List<T> group1 = new List<T>();
-                List<T> group2 = new List<T>();
-                for (int i = 0; i < entries.Count; ++i)
+                GroupSplitIndexProducer iproducer = new GroupSplitIndexProducer(N, m);
+                do
                 {
-
-                }
+                    List<T> group1 = new List<T>();
+                    List<T> group2 = new List<T>();
+                    foreach (int i in iproducer.group1) group1.Add(entries[i]);
+                    foreach (int i in iproducer.group2) group2.Add(entries[i]);
+                    result.Add(new EntrySplit<T>(group1, group2));
+                } while (iproducer.Next());
+                ++m;
             }
+            return result;
         }
     }
 
