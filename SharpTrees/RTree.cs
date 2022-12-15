@@ -214,14 +214,26 @@ namespace SharpTrees
     {
         private Node root;
 
-        private uint MaxEntries { get; }
-        private uint MinEntries { get; }
+        private NodeSplitter splitter;
 
-        public RTree(byte maxEntries, byte minEntries)
+        private uint MaxEntries { get => splitter.MaxEntries; }
+        private uint MinEntries { get => splitter.MinEntries; }
+
+        public RTree(byte maxEntries, byte minEntries, NodeSplitStrategy strategy)
         {
-            MaxEntries = maxEntries;
-            MinEntries = minEntries;
-            root = new LeafNode(MaxEntries, MinEntries);
+            switch (strategy)
+            {
+                case NodeSplitStrategy.Exhaustive:
+                    splitter = new ExhaustiveSlitter(minEntries, maxEntries);
+                    break;
+                case NodeSplitStrategy.Quadratic:
+                    splitter = new QuadraticSplitter(minEntries, maxEntries);
+                    break;
+                case NodeSplitStrategy.Linear:
+                    splitter = new LinearSplitter(minEntries, maxEntries);
+                    break;
+            }
+            root = new LeafNode(splitter);
         }
 
         /// <summary>
@@ -283,33 +295,69 @@ namespace SharpTrees
 
     }
 
-
+    /// <summary>
+    /// Represents RTree node.
+    /// </summary>
     internal abstract class Node
     {
-        protected uint MaxEntries { get; }
-        protected uint MinEntries { get; }
+        /// <summary>
+        /// Maximum number of entries in the node.
+        /// </summary>
+        protected uint MaxEntries { get => splitter.MaxEntries; }
+        /// <summary>
+        /// Minimum number of entries in the node.
+        /// </summary>
+        protected uint MinEntries { get => splitter.MinEntries; }
 
-        protected Node(uint maxEntries, uint minEntries)
+        /// <summary>
+        /// Node splitter object.
+        /// </summary>
+        protected NodeSplitter splitter;
+
+        protected Node(NodeSplitter splitter)
         {
-            MaxEntries = maxEntries;
-            MinEntries = minEntries;
+            this.splitter = splitter;
         }
 
-
+        /// <summary>
+        /// Finds all Leaf entries that have intersections with the target rectangle.
+        /// </summary>
+        /// <param name="target">Target rectangle.</param>
+        /// <param name="foundObjects">Found entries.</param>
         internal abstract void SearchIntersections(Rectangle target, ICollection<LeafEntry> foundObjects);
+        
+        /// <summary>
+        /// Searches for the entry that equals to the target.
+        /// </summary>
+        /// <param name="target">The target.</param>
+        /// <returns></returns>
         internal abstract LeafEntry Search(LeafEntry target);
 
+        /// <summary>
+        /// Adds target to the Node.
+        /// </summary>
+        /// <param name="target">The target entry to be added.</param>
+        /// <returns></returns>
         internal abstract Node AddItem(LeafEntry target);
 
+        /// <summary>
+        /// Performes correction of bounding rectangles.
+        /// </summary>
         internal abstract void AdjustRectangles();
 
+        /// <summary>
+        /// Calculates rectangle that bounds all node entries.
+        /// </summary>
+        /// <returns></returns>
         internal abstract Rectangle GetRectangle();
 
-        protected static List<T> SplitNode<T>(List<T> entries) where T : Entry
-        {
-            throw new NotImplementedException();
-        }
-
+        /// <summary>
+        /// Finds entries, that intersect the target rectangle.
+        /// </summary>
+        /// <typeparam name="T">Type of Entry: LeafEntry or NodeEntry.</typeparam>
+        /// <param name="target">Target rectangle.</param>
+        /// <param name="entries">Entries among which the search will be performed.</param>
+        /// <returns>List of entries sorted by intersection area: from largest to lowes.</returns>
         protected static List<T> FindIntersectingEntries<T>(Rectangle target, List<T> entries) where T : Entry
         {
             SortedDictionary<double, T> data = new SortedDictionary<double, T>(new AreaDescendingComparer());
@@ -324,6 +372,12 @@ namespace SharpTrees
             return data.Values.ToList();
         }
 
+        /// <summary>
+        /// Calculates rectangle that bounds the node all entries.
+        /// </summary>
+        /// <typeparam name="T">Entry type: LeafEntry or NodeEntry.</typeparam>
+        /// <param name="entries">Node entries.</param>
+        /// <returns>Bounding rectangle.</returns>
         protected static Rectangle GetRectangle<T>(List<T> entries) where T : Entry
         {
             Rectangle result = entries[0].Rectangle;
@@ -335,14 +389,17 @@ namespace SharpTrees
         }
     }
 
+    /// <summary>
+    /// Represents Node that contains only leaf entries.
+    /// </summary>
     internal class LeafNode : Node
     {
         private List<LeafEntry> entries;
 
-        internal LeafNode(uint maxEntries, uint minEntries) : this(maxEntries, minEntries, new List<LeafEntry>())
+        internal LeafNode(NodeSplitter splitter) : this(splitter, new List<LeafEntry>())
         { }
 
-        protected LeafNode(uint maxEntries, uint minEntries, List<LeafEntry> entries) : base(maxEntries, minEntries)
+        protected LeafNode(NodeSplitter splitter, List<LeafEntry> entries) : base(splitter)
         {
             this.entries = entries;
         }
@@ -378,8 +435,9 @@ namespace SharpTrees
             entries.Add(target);
             if (entries.Count > MaxEntries)
             {
-                List<LeafEntry> other = SplitNode(entries);
-                return new LeafNode(MaxEntries, MinEntries, other);
+                EntrySplit<LeafEntry> split = splitter.Split(entries);
+                entries = split.group1;
+                return new LeafNode(splitter, split.group2);
             }
             return null;
         }
@@ -389,10 +447,10 @@ namespace SharpTrees
     {
         private List<NodeEntry> entries;
 
-        internal NonLeafNode(uint maxEntries, uint minEntries) : this(maxEntries, minEntries, new List<NodeEntry>())
+        internal NonLeafNode(NodeSplitter splitter) : this(splitter, new List<NodeEntry>())
         { }
 
-        private NonLeafNode(uint maxEntries, uint minEntries, List<NodeEntry> entries) : base(maxEntries, minEntries)
+        private NonLeafNode(NodeSplitter splitter, List<NodeEntry> entries) : base(splitter)
         {
             this.entries = entries;
         }
@@ -400,7 +458,7 @@ namespace SharpTrees
         internal override LeafEntry Search(LeafEntry target)
         {
             LeafEntry result = null;
-            List<NodeEntry> candidates = FindIntersectingEntries<NodeEntry>(target.Rectangle, entries);
+            List<NodeEntry> candidates = FindIntersectingEntries(target.Rectangle, entries);
             foreach (NodeEntry entry in candidates)
             {
                 result = entry.Node.Search(target);
@@ -411,7 +469,7 @@ namespace SharpTrees
 
         internal override void SearchIntersections(Rectangle target, ICollection<LeafEntry> foundObjects)
         {
-            List<NodeEntry> candidates = FindIntersectingEntries<NodeEntry>(target, entries);
+            List<NodeEntry> candidates = FindIntersectingEntries(target, entries);
             foreach (NodeEntry entry in candidates)
             {
                 entry.Node.SearchIntersections(target, foundObjects);
@@ -442,8 +500,9 @@ namespace SharpTrees
                 entries.Add(new NodeEntry(afterSplit));
                 if (entries.Count > MaxEntries)
                 {
-                    List<NodeEntry> other = SplitNode(entries);
-                    return new NonLeafNode(MaxEntries, MinEntries, other);
+                    EntrySplit<NodeEntry> split = splitter.Split(entries);
+                    entries = split.group1;
+                    return new NonLeafNode(splitter, split.group2);
                 }
             }
             return null;
@@ -631,55 +690,25 @@ namespace SharpTrees
         }
     }
 
-    internal class NodeSplitter2
+    internal class QuadraticSplitter : NodeSplitter
     {
-        internal NodeSplitStrategy Strategy { get; }
+        internal QuadraticSplitter(uint minEntries, uint maxEntries) : base(minEntries, maxEntries)
+        { }
 
-        internal uint MinEntries { get; }
-        internal uint MaxEntries { get; }
-
-        internal NodeSplitter2(uint minEntries, uint maxEntries, NodeSplitStrategy strategy) {
-            MinEntries = minEntries;
-            MaxEntries = maxEntries;
-            Strategy = strategy;
-        }
-
-        internal List<T> Split<T>(List<T> entries) where T : Entry
-        {
-            if (entries.Count > MaxEntries)
-            {
-                switch (Strategy)
-                {
-                    case NodeSplitStrategy.Exhaustive:
-                        return SplitExhaustive<T>(entries);
-                    case NodeSplitStrategy.Quadratic:
-                        return SplitQuadratic<T>(entries);
-                    case NodeSplitStrategy.Linear:
-                        return SplitLinear<T>(entries);
-                }
-            }
-            return null;
-        }
-
-        private List<T> SplitExhaustive<T>(List<T> entries) where T : Entry
+        internal override EntrySplit<T> Split<T>(List<T> entries)
         {
             throw new NotImplementedException();
         }
+    }
 
-        private List<T> SplitQuadratic<T>(List<T> entries) where T : Entry
+    internal class LinearSplitter : NodeSplitter
+    {
+        internal LinearSplitter(uint minEntries, uint maxEntries) : base(minEntries, maxEntries)
+        { }
+
+        internal override EntrySplit<T> Split<T>(List<T> entries)
         {
             throw new NotImplementedException();
-        }
-
-        private List<T> SplitLinear<T>(List<T> entries) where T : Entry
-        {
-            throw new NotImplementedException();
-        }
-
-        private List<T> SplitRStar<T>(List<T> entries) where T : Entry
-        {
-
-            return null;
         }
     }
 }
