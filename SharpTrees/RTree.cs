@@ -281,7 +281,13 @@ namespace SharpTrees
         /// null if RTree does not contain such item.</returns>
         public T Delete(T target)
         {
-            throw new NotImplementedException();
+            LeafEntry targetEntry = new LeafEntry(target);
+            LeafEntry deletedEntry = root.DeleteItem(targetEntry, out List<Node> forReinsert);
+            if (forReinsert != null && forReinsert.Count == 1)
+            {
+                root = forReinsert[0];
+            }
+            return (T)deletedEntry.DataItem;
         }
 
         /// <summary>
@@ -290,7 +296,13 @@ namespace SharpTrees
         /// <param name="item">Item to be inserted.</param>
         public void Add(T item)
         {
-            throw new NotImplementedException();
+            // TODO: Add checking if the item already exist.
+            LeafEntry target = new LeafEntry(item);
+            Node afterSplit = root.AddItem(target);
+            if (afterSplit != null)
+            {
+                root = new NonLeafNode(splitter, root, afterSplit);
+            }
         }
 
     }
@@ -337,13 +349,12 @@ namespace SharpTrees
         /// Adds target to the Node.
         /// </summary>
         /// <param name="target">The target entry to be added.</param>
-        /// <returns></returns>
+        /// <returns>Extra node if the node was splitted. null otherwise.</returns>
         internal abstract Node AddItem(LeafEntry target);
 
-        /// <summary>
-        /// Performes correction of bounding rectangles.
-        /// </summary>
-        internal abstract void AdjustRectangles();
+        internal abstract LeafEntry DeleteItem(LeafEntry target, out List<Node> forReinsert);
+
+        internal abstract void GetAllLeafEntries(List<LeafEntry> leafEntries);
 
         /// <summary>
         /// Calculates rectangle that bounds all node entries.
@@ -357,16 +368,16 @@ namespace SharpTrees
         /// <typeparam name="T">Type of Entry: LeafEntry or NodeEntry.</typeparam>
         /// <param name="target">Target rectangle.</param>
         /// <param name="entries">Entries among which the search will be performed.</param>
-        /// <returns>List of entries sorted by intersection area: from largest to lowes.</returns>
-        protected static List<T> FindIntersectingEntries<T>(Rectangle target, List<T> entries) where T : Entry
+        /// <returns>List of entry indices sorted by intersection area: from largest to lowest.</returns>
+        protected static List<int> FindIntersectingEntries<T>(Rectangle target, List<T> entries) where T : Entry
         {
-            SortedDictionary<double, T> data = new SortedDictionary<double, T>(new AreaDescendingComparer());
-            foreach (T entry in entries)
+            SortedDictionary<double, int> data = new SortedDictionary<double, int>(new AreaDescendingComparer());
+            for (int i = 0; i < entries.Count; ++i)
             {
-                double area = entry.Rectangle.GetOverlappingArea(target);
+                double area = entries[i].Rectangle.GetOverlappingArea(target);
                 if (area > 0)
                 {
-                    data.Add(area, entry);
+                    data.Add(area, i);
                 }
             }
             return data.Values.ToList();
@@ -406,28 +417,52 @@ namespace SharpTrees
 
         internal override LeafEntry Search(LeafEntry target)
         {
-            List<LeafEntry> candidates = FindIntersectingEntries<LeafEntry>(target.Rectangle, entries);
-            foreach (LeafEntry entry in candidates)
+            List<int> indices = FindIntersectingEntries(target.Rectangle, entries);
+            foreach (int i in indices)
             {
-                if (entry.DataItem.IsEqual(target.DataItem)) return entry;
+                if (entries[i].DataItem.IsEqual(target.DataItem)) return entries[i];
             }
             return null;
         }
 
         internal override void SearchIntersections(Rectangle target, ICollection<LeafEntry> foundObjects)
         {
-            List<LeafEntry> candidates = FindIntersectingEntries<LeafEntry>(target, entries);
-            foreach (LeafEntry entry in candidates)
+            List<int> indices = FindIntersectingEntries(target, entries);
+            foreach (int i in indices)
             {
-                foundObjects.Add(entry);
+                foundObjects.Add(entries[i]);
             }
         }
-
-        internal override void AdjustRectangles() { }
 
         internal override Rectangle GetRectangle()
         {
             return GetRectangle(entries);
+        }
+
+        internal override LeafEntry DeleteItem(LeafEntry target, out List<Node> forReinsert)
+        {
+            List<int> indices = FindIntersectingEntries(target.Rectangle, entries);
+            LeafEntry result = null;
+            forReinsert = null;
+            foreach (int i in indices)
+            {
+                if (entries[i].DataItem.IsEqual(target.DataItem))
+                {
+                    result = entries[i];
+                    entries.RemoveAt(i);
+                    if (entries.Count < MinEntries) forReinsert = new List<Node>() { this };
+                    break;
+                }
+            }
+            return result;
+        }
+
+        internal override void GetAllLeafEntries(List<LeafEntry> leafEntries)
+        {
+            foreach (LeafEntry entry in entries)
+            {
+                leafEntries.Add(entry);
+            }
         }
 
         internal override Node AddItem(LeafEntry target)
@@ -450,6 +485,15 @@ namespace SharpTrees
         internal NonLeafNode(NodeSplitter splitter) : this(splitter, new List<NodeEntry>())
         { }
 
+        internal NonLeafNode(NodeSplitter splitter, Node node1, Node node2) : base(splitter)
+        {
+            entries = new List<NodeEntry>()
+            {
+                new NodeEntry(node1),
+                new NodeEntry(node2)
+            };
+        }
+
         private NonLeafNode(NodeSplitter splitter, List<NodeEntry> entries) : base(splitter)
         {
             this.entries = entries;
@@ -458,10 +502,10 @@ namespace SharpTrees
         internal override LeafEntry Search(LeafEntry target)
         {
             LeafEntry result = null;
-            List<NodeEntry> candidates = FindIntersectingEntries(target.Rectangle, entries);
-            foreach (NodeEntry entry in candidates)
+            List<int> indices = FindIntersectingEntries(target.Rectangle, entries);
+            foreach (int i in indices)
             {
-                result = entry.Node.Search(target);
+                result = entries[i].Node.Search(target);
                 if (result != null) break;
             }
             return result;
@@ -469,19 +513,10 @@ namespace SharpTrees
 
         internal override void SearchIntersections(Rectangle target, ICollection<LeafEntry> foundObjects)
         {
-            List<NodeEntry> candidates = FindIntersectingEntries(target, entries);
-            foreach (NodeEntry entry in candidates)
+            List<int> indices = FindIntersectingEntries(target, entries);
+            foreach (int i in indices)
             {
-                entry.Node.SearchIntersections(target, foundObjects);
-            }
-        }
-
-        internal override void AdjustRectangles()
-        {
-            foreach (NodeEntry entry in entries)
-            {
-                entry.Node.AdjustRectangles();
-                entry.Rectangle = entry.Node.GetRectangle();
+                entries[i].Node.SearchIntersections(target, foundObjects);
             }
         }
 
@@ -490,11 +525,55 @@ namespace SharpTrees
             return GetRectangle(entries);
         }
 
+        internal override LeafEntry DeleteItem(LeafEntry target, out List<Node> forReinsert)
+        {
+            List<int> indices = FindIntersectingEntries(target.Rectangle, entries);
+            LeafEntry result = null;
+            forReinsert = null;
+            foreach (int i in indices)
+            {
+                result = entries[i].Node.DeleteItem(target, out List<Node> extraNodes);
+                if (result != null)
+                {
+                    entries[i].AdjustRectangle();
+                    if (extraNodes != null)
+                    {
+                        entries.RemoveAt(i);
+                        forReinsert = ReinsertNodes(extraNodes);
+                    }
+                    break;
+                }
+            }
+            return result;
+        }
+
+        private List<Node> ReinsertNodes(List<Node> forReinsert)
+        {
+            List<Node> result = null;
+            List<LeafEntry> entriesForReinsert = new List<LeafEntry>();
+            foreach (Node node in forReinsert) node.GetAllLeafEntries(entriesForReinsert);
+            foreach (LeafEntry entry in entriesForReinsert) AddItem(entry);
+            if (entries.Count < MinEntries)
+            {
+                result = new List<Node>();
+                foreach (NodeEntry entry in entries) result.Add(entry.Node);
+            }
+            return result;
+        }
+
+        internal override void GetAllLeafEntries(List<LeafEntry> leafEntries)
+        {
+            foreach (NodeEntry entry in entries)
+            {
+                entry.Node.GetAllLeafEntries(leafEntries);
+            }
+        }
+
         internal override Node AddItem(LeafEntry target)
         {
-            // Find best node
-            int i = 0;
-            Node afterSplit = entries[i].Node.AddItem(target);
+            Node result = null;
+            NodeEntry toAdd = ChooseEntryToInsert(target.Rectangle);
+            Node afterSplit = toAdd.Node.AddItem(target);
             if (afterSplit != null)
             {
                 entries.Add(new NodeEntry(afterSplit));
@@ -502,10 +581,30 @@ namespace SharpTrees
                 {
                     EntrySplit<NodeEntry> split = splitter.Split(entries);
                     entries = split.group1;
-                    return new NonLeafNode(splitter, split.group2);
+                    result = new NonLeafNode(splitter, split.group2);
                 }
             }
-            return null;
+            toAdd.AdjustRectangle();
+            return result;
+        }
+
+        private NodeEntry ChooseEntryToInsert(Rectangle target)
+        {
+            NodeEntry result = null;
+            double smallestEnlargement = double.PositiveInfinity;
+            foreach (NodeEntry entry in entries)
+            {
+                Rectangle r = entry.Rectangle.Merge(target);
+                double enlargment = r.Area - entry.Rectangle.Area;
+                if (enlargment < smallestEnlargement || 
+                    enlargment == smallestEnlargement && 
+                    entry.Rectangle.Area < result.Rectangle.Area)
+                {
+                    smallestEnlargement = enlargment;
+                    result = entry;
+                }
+            }
+            return result;
         }
     }
 
@@ -533,6 +632,11 @@ namespace SharpTrees
         {
             Node = node;
             Rectangle = node.GetRectangle();
+        }
+
+        internal void AdjustRectangle()
+        {
+            Rectangle = Node.GetRectangle();
         }
     }
 
@@ -693,7 +797,9 @@ namespace SharpTrees
     internal class QuadraticSplitter : NodeSplitter
     {
         internal QuadraticSplitter(uint minEntries, uint maxEntries) : base(minEntries, maxEntries)
-        { }
+        {
+            throw new NotImplementedException();
+        }
 
         internal override EntrySplit<T> Split<T>(List<T> entries)
         {
@@ -704,7 +810,9 @@ namespace SharpTrees
     internal class LinearSplitter : NodeSplitter
     {
         internal LinearSplitter(uint minEntries, uint maxEntries) : base(minEntries, maxEntries)
-        { }
+        {
+            throw new NotImplementedException();
+        }
 
         internal override EntrySplit<T> Split<T>(List<T> entries)
         {
