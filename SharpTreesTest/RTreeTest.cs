@@ -14,6 +14,152 @@ namespace SharpTreesTest
         }
     }
 
+    internal class Point : IBounded
+    {
+        internal double X { get; }
+        internal double Y { get; }
+        internal double H { get; }
+
+        internal Point(double x, double y, double h)
+        {
+            X = x;
+            Y = y;
+            H = h;
+        }
+
+        public Bounds[] GetBounds()
+        {
+            Bounds[] result = new Bounds[2];
+            result[0] = new Bounds(X - H, X + H);
+            result[1] = new Bounds(Y - H, Y + H);
+            return result;
+        }
+
+        public bool IsEqual(IBounded other)
+        {
+            Point otherPoint = other as Point;
+            if (Math.Abs(X - otherPoint.X) >= H) return false;
+            return Math.Abs(Y - otherPoint.Y) < H;
+        }
+    }
+
+    [TestClass]
+    public class LeafNodeTest
+    {
+        internal static LeafNode CreateLeafNode(int number)
+        {
+            NodeSplitter splitter = null;
+            switch (number)
+            {
+                case 0:
+                    splitter = new ExhaustiveSlitter(2, 4);
+                    break;
+                case 1:
+                    splitter = new ExhaustiveSlitter(2, 5);
+                    break;
+                case 2:
+                    splitter = new ExhaustiveSlitter(2, 6);
+                    break;
+                case 3:
+                    splitter = new ExhaustiveSlitter(3, 6);
+                    break;
+            }
+            return new LeafNode(splitter);
+        }
+
+        internal static Point[] points =
+        {
+            new Point(1, 1, 0.1),
+            new Point(1, 2, 0.1),
+            new Point(2, 1, 0.1),
+            new Point(2, 2, 0.1),
+            new Point(3, 1, 0.1),
+            new Point(1, 3, 0.1),
+            new Point(3, 3, 0.1)
+        };
+
+        [TestMethod]
+        [DataRow(0, new int[] {0}, 0.9, 1.1, 0.9, 1.1)]
+        [DataRow(0, new int[] { 0, 1, 4 }, 0.9, 3.1, 0.9, 2.1)]
+        [DataRow(0, new int[] { 3, 6 }, 1.9, 3.1, 1.9, 3.1)]
+        public void TestGetRectangle(int si, int[] add_index, double xmin, double xmax, double ymin, double ymax)
+        {
+            LeafNode node = CreateLeafNode(si);
+            foreach (int i in add_index) node.AddItem(new LeafEntry(points[i]));
+            Rectangle rect = node.GetRectangle();
+            Bounds xbounds = rect.GetBounds(0);
+            Bounds ybounds = rect.GetBounds(1);
+            Assert.AreEqual(xmin, xbounds.Min);
+            Assert.AreEqual(xmax, xbounds.Max);
+            Assert.AreEqual(ymin, ybounds.Min);
+            Assert.AreEqual(ymax, ybounds.Max);
+        }
+
+        [TestMethod]
+        [DataRow(0, new int[] { 0 }, 0, true)]
+        [DataRow(0, new int[] { 0 }, 1, false)]
+        [DataRow(0, new int[] { }, 0, false)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 0, true)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 1, true)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 2, true)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 3, true)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 4, false)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 5, false)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 6, false)]
+        public void TestSearch(int si, int[] add_index, int searchIndex, bool hasResult)
+        {
+            LeafNode node = CreateLeafNode(si);
+            foreach (int i in add_index) node.AddItem(new LeafEntry(points[i]));
+            LeafEntry result = node.Search(new LeafEntry(points[searchIndex]));
+            Assert.AreEqual(hasResult, result != null);
+            if (hasResult)
+            {
+                Assert.IsTrue(result.DataItem.IsEqual(points[searchIndex]));
+            }
+
+        }
+
+        [TestMethod]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 0.99, 2.01, 0.99, 2.01, new int[] {0, 1, 2, 3})]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 0.99, 2.01, 0.99, 1.01, new int[] {0, 1})]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 1.99, 2.01, 0.99, 1.01, new int[] { 2 })]
+        public void TestSearchIntersections(int si, int[] add_index, double xmin, double xmax, double ymin, double ymax, int[] found_index)
+        {
+            LeafNode node = CreateLeafNode(si);
+            foreach (int i in add_index) node.AddItem(new LeafEntry(points[i]));
+            Rectangle rect = new Rectangle(new Bounds(xmin, xmax), new Bounds(ymin, ymax));
+            List<LeafEntry> searchResult = new List<LeafEntry>();
+            node.SearchIntersections(rect, searchResult);
+
+            Assert.AreEqual(found_index.Length, searchResult.Count);
+        }
+
+        [TestMethod]
+        [DataRow(0, new int[] { 0 }, 1, false)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 4, true)]
+        [DataRow(0, new int[] { 1, 2, 3, 4 }, 5, true)]
+        [DataRow(1, new int[] { 0, 1, 2, 3 }, 4, false)]
+        [DataRow(1, new int[] { 0, 1, 2, 3, 4 }, 5, true)]
+        public void TestAddItem(int si, int[] initial_add, int final_add, bool hasSplit)
+        {
+            LeafNode node = CreateLeafNode(si);
+            foreach (int i in initial_add) node.AddItem(new LeafEntry(points[i]));
+            Node splitNode = node.AddItem(new LeafEntry(points[final_add]));
+            Assert.AreEqual(hasSplit, splitNode != null);
+            if (hasSplit)
+            {
+                List<int> index = new List<int>(initial_add);
+                index.Add(final_add);
+                foreach (int i in index)
+                {
+                    LeafEntry search1 = node.Search(new LeafEntry(points[i]));
+                    LeafEntry search2 = splitNode.Search(new LeafEntry(points[i]));
+                    Assert.IsTrue(search1 != null ^ search2 != null);
+                }
+            }
+        }
+    }
+
     [TestClass]
     public class BoundsTest
     {
@@ -395,4 +541,5 @@ namespace SharpTreesTest
             }
         }
     }
+
 }

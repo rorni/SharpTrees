@@ -216,9 +216,6 @@ namespace SharpTrees
 
         private NodeSplitter splitter;
 
-        private uint MaxEntries { get => splitter.MaxEntries; }
-        private uint MinEntries { get => splitter.MinEntries; }
-
         public RTree(byte maxEntries, byte minEntries, NodeSplitStrategy strategy)
         {
             switch (strategy)
@@ -277,32 +274,47 @@ namespace SharpTrees
         /// Deletes item from the RTree.
         /// </summary>
         /// <param name="target">Item to be deleted.</param>
-        /// <returns>If the item was deleted the item is returned.
-        /// null if RTree does not contain such item.</returns>
-        public T Delete(T target)
+        /// <param name="deleted">Deleted item.</param>
+        /// <returns>True, if an item was deleted. False if there is no such item.</returns>
+        public bool Delete(T target, out T deleted)
         {
+            bool result = false;
             LeafEntry targetEntry = new LeafEntry(target);
             LeafEntry deletedEntry = root.DeleteItem(targetEntry, out List<Node> forReinsert);
-            if (forReinsert != null && forReinsert.Count == 1)
+            if (deletedEntry != null)
             {
-                root = forReinsert[0];
+                if (forReinsert != null && forReinsert.Count == 1)
+                {
+                    root = forReinsert[0];
+                }
+                deleted = (T)deletedEntry.DataItem;
+                result = true;
+            } else
+            {
+                deleted = target;
             }
-            return (T)deletedEntry.DataItem;
+            return result;
         }
 
         /// <summary>
         /// Adds new item to the RTree.
         /// </summary>
         /// <param name="item">Item to be inserted.</param>
-        public void Add(T item)
+        /// <returns>True, if the item was added to the tree. False
+        /// if such item already exists.</returns>
+        public bool Add(T item)
         {
-            // TODO: Add checking if the item already exist.
             LeafEntry target = new LeafEntry(item);
-            Node afterSplit = root.AddItem(target);
-            if (afterSplit != null)
+            bool result = root.Search(target) == null;
+            if (result)
             {
-                root = new NonLeafNode(splitter, root, afterSplit);
+                Node afterSplit = root.AddItem(target);
+                if (afterSplit != null)
+                {
+                    root = new NonLeafNode(splitter, root, afterSplit);
+                }
             }
+            return result;
         }
 
     }
@@ -352,8 +364,21 @@ namespace SharpTrees
         /// <returns>Extra node if the node was splitted. null otherwise.</returns>
         internal abstract Node AddItem(LeafEntry target);
 
+        /// <summary>
+        /// Deletes target from the Node. 
+        /// 
+        /// If the number of entries becomes less than minimum value,
+        /// the node must be deleted.
+        /// </summary>
+        /// <param name="target">Item to be deleted.</param>
+        /// <param name="forReinsert">All entries that belongs to the node and must be reinserted.</param>
+        /// <returns>Entry that was deleted.</returns>
         internal abstract LeafEntry DeleteItem(LeafEntry target, out List<Node> forReinsert);
 
+        /// <summary>
+        /// Gets all leaf entries of the node and its descendants.
+        /// </summary>
+        /// <param name="leafEntries">A list of leaf entries.</param>
         internal abstract void GetAllLeafEntries(List<LeafEntry> leafEntries);
 
         /// <summary>
@@ -371,16 +396,19 @@ namespace SharpTrees
         /// <returns>List of entry indices sorted by intersection area: from largest to lowest.</returns>
         protected static List<int> FindIntersectingEntries<T>(Rectangle target, List<T> entries) where T : Entry
         {
-            SortedDictionary<double, int> data = new SortedDictionary<double, int>(new AreaDescendingComparer());
+            List<AreaIndex> data = new List<AreaIndex>();
             for (int i = 0; i < entries.Count; ++i)
             {
                 double area = entries[i].Rectangle.GetOverlappingArea(target);
                 if (area > 0)
                 {
-                    data.Add(area, i);
+                    data.Add(new AreaIndex(area, i));
                 }
             }
-            return data.Values.ToList();
+            data.Sort(areaComparer);
+            List<int> result = new List<int>();
+            foreach (var ai in data) result.Add(ai.index);
+            return result;
         }
 
         /// <summary>
@@ -398,6 +426,29 @@ namespace SharpTrees
             }
             return result;
         }
+
+        private struct AreaIndex
+        {
+            public AreaIndex(double area, int index)
+            {
+                this.area = area;
+                this.index = index;
+            }
+
+            public double area;
+            public int index;
+        }
+
+        private static AreaDescendingComparer areaComparer = new AreaDescendingComparer();
+
+        private class AreaDescendingComparer : IComparer<AreaIndex>
+        {
+            public int Compare(AreaIndex x, AreaIndex y)
+            {
+                return y.area.CompareTo(x.area);
+            }
+        }
+
     }
 
     /// <summary>
@@ -640,14 +691,6 @@ namespace SharpTrees
         }
     }
 
-    internal class AreaDescendingComparer : IComparer<double>
-    {
-        public int Compare(double x, double y)
-        {
-            return Compare(y, x);
-        }
-    }
-
     public enum NodeSplitStrategy
     {
         Exhaustive, Quadratic, Linear
@@ -723,7 +766,7 @@ namespace SharpTrees
             List<EntrySplit<T>> result = new List<EntrySplit<T>>();
             uint m = MinEntries;
             uint N = (uint)entries.Count;
-            while (2 * m < MaxEntries)
+            while (2 * m <= MaxEntries)
             {
                 GroupSplitIndexProducer iproducer = new GroupSplitIndexProducer(N, m);
                 do
