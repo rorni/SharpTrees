@@ -8,9 +8,115 @@ namespace SharpTreesTest
     [TestClass]
     public class RTreeTest
     {
-        [TestMethod]
-        public void TestMethod1()
+        private Point[] GeneratePoints(int nx, int ny, double dx, double dy, double h)
         {
+            int count = nx * ny;
+            Point[] result = new Point[count];
+
+            double x = 0;
+            double y = 0;
+            for (int i = 0; i < nx; ++i)
+            {
+                for (int j = 0; j < ny; ++j)
+                {
+                    result[i * nx + j] = new Point(x + i * dx, y + j * dy, h);
+                }
+            }
+            return result;
+        }
+
+        private Point[] points;
+
+        private void AssertBalance<T>(RTree<T> rtree, byte M, byte m) where T : IBounded
+        {
+            rtree.CollectDiagnosticsData(out List<int> leafEntryDepth, out Dictionary<int, List<int>> entryCount);
+            int level = leafEntryDepth[0];
+            for (int i = 1; i < leafEntryDepth.Count; ++i) Assert.AreEqual(level, leafEntryDepth[i]);
+            int lower_bound;
+            foreach (KeyValuePair<int, List<int>> kvp in entryCount)
+            {
+                if (level == 0) lower_bound = 0;
+                else if (kvp.Key == 0) lower_bound = 2;
+                else lower_bound = m;
+                foreach (int value in kvp.Value)
+                {
+                    Assert.IsTrue(value >= lower_bound);
+                    Assert.IsTrue(value <= M);
+                }
+            }
+        }
+
+        public RTreeTest()
+        {
+            points = GeneratePoints(30, 30, 1, 1, 0.1);
+        }
+
+        [TestMethod]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 900)]
+        public void TestAdd(byte M, byte m, NodeSplitStrategy strategy, int start, int end)
+        {
+            RTree<Point> rtree = new RTree<Point>(M, m, strategy);
+            for (int i = start; i < end; ++i) rtree.Add(points[i]);
+            AssertBalance<Point>(rtree, M, m);
+        }
+
+        [TestMethod]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 5, 10)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 50, 100)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 300, 900)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 700, 900)]
+        public void TestSearch(byte M, byte m, NodeSplitStrategy strategy, int start, int end)
+        {
+            RTree<Point> rtree = new RTree<Point>(M, m, strategy);
+            for (int i = start; i < end; ++i) rtree.Add(points[i]);
+
+            for (int i = 0; i < points.Length; ++i)
+            {
+                bool expectToFind = i >= start && i < end;
+                bool found = rtree.Search(points[i], out Point foundPoint);
+                Assert.AreEqual(expectToFind, found);
+                if (expectToFind) Assert.IsTrue(points[i].IsEqual(foundPoint));
+            }
+        }
+
+        [TestMethod]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10, 4, 8)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100, 1, 100)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900, 100, 890)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 5, 10, 0, 15)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 50, 100, 50, 99)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 300, 900, 800, 900)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 10, 8, 11)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 100, 0, 90)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 700, 900, 800, 830)]
+        public void TestDelete(byte M, byte m, NodeSplitStrategy strategy, int start, int end, int del_start, int del_end)
+        {
+            RTree<Point> rtree = new RTree<Point>(M, m, strategy);
+            for (int i = start; i < end; ++i) rtree.Add(points[i]);
+
+            for (int i = del_start; i < del_end; ++i)
+            {
+                bool result = rtree.Delete(points[i], out Point deletedPoint);
+                bool expectToDelete = i >= start && i < end;
+                Assert.AreEqual(expectToDelete, result);
+                if (expectToDelete) {
+                    Assert.IsTrue(points[i].IsEqual(deletedPoint));
+                    AssertBalance(rtree, M, m);
+                }
+            }
         }
     }
 

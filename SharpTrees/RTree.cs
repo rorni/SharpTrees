@@ -316,6 +316,13 @@ namespace SharpTrees
             }
             return result;
         }
+        
+        internal void CollectDiagnosticsData(out List<int> leafEntryDepth, out Dictionary<int, List<int>> entryCount)
+        {
+            leafEntryDepth = new List<int>();
+            entryCount = new Dictionary<int, List<int>>();
+            root.CollectDiagnosticsData(0, leafEntryDepth, entryCount);
+        }
 
     }
 
@@ -449,6 +456,7 @@ namespace SharpTrees
             }
         }
 
+        internal abstract void CollectDiagnosticsData(int level, List<int> leafEntryDepth, Dictionary<int, List<int>> entryCount);
     }
 
     /// <summary>
@@ -526,6 +534,14 @@ namespace SharpTrees
                 return new LeafNode(splitter, split.group2);
             }
             return null;
+        }
+
+        internal override void CollectDiagnosticsData(int level, List<int> leafEntryDepth, Dictionary<int, List<int>> entryCount)
+        {
+            if (!entryCount.ContainsKey(level)) entryCount.Add(level, new List<int>());
+            entryCount[level].Add(entries.Count);
+
+            leafEntryDepth.Add(level);
         }
     }
 
@@ -657,6 +673,18 @@ namespace SharpTrees
             }
             return result;
         }
+
+        internal override void CollectDiagnosticsData(int level, List<int> leafEntryDepth, Dictionary<int, List<int>> entryCount)
+        {
+            if (!entryCount.ContainsKey(level)) entryCount.Add(level, new List<int>());
+            entryCount[level].Add(entries.Count);
+
+            foreach (NodeEntry entry in entries)
+            {
+                entry.Node.CollectDiagnosticsData(level + 1, leafEntryDepth, entryCount);
+            }
+        }
+
     }
 
     internal abstract class Entry
