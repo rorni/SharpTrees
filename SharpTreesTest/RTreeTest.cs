@@ -79,6 +79,28 @@ namespace SharpTreesTest
         };
 
         [TestMethod]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 0, true, false)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 1, true, false)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 2, true, false)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 3, true, false)]
+        [DataRow(0, new int[] { 0, 1, 2, 3 }, 4, false, false)]
+        [DataRow(0, new int[] { 0, 1, 2 }, 2, true, false)]
+        [DataRow(0, new int[] { 0, 1 }, 1, true, true)]
+        [DataRow(0, new int[] { 0, 1 }, 2, false, false)]
+        public void TestDeleteItem(int si, int[] add_index, int delete_index, bool wasDeleted, bool hasReinsert)
+        {
+            LeafNode node = CreateLeafNode(si);
+            foreach (int i in add_index) node.AddItem(new LeafEntry(points[i]));
+            LeafEntry targetEntry = new LeafEntry(points[delete_index]);
+            LeafEntry deletedEntry = node.DeleteItem(targetEntry, out List<Node> forReinsert);
+            if (wasDeleted) Assert.IsTrue(targetEntry.DataItem.IsEqual(deletedEntry.DataItem));
+            else Assert.IsNull(deletedEntry);
+            Assert.AreEqual(hasReinsert, forReinsert != null);
+            LeafEntry result = node.Search(new LeafEntry(points[delete_index]));
+            Assert.IsNull(result);
+        }
+
+        [TestMethod]
         [DataRow(0, new int[] {0}, 0.9, 1.1, 0.9, 1.1)]
         [DataRow(0, new int[] { 0, 1, 4 }, 0.9, 3.1, 0.9, 2.1)]
         [DataRow(0, new int[] { 3, 6 }, 1.9, 3.1, 1.9, 3.1)]
