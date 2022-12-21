@@ -64,8 +64,11 @@ namespace SharpTreesTest
         public void TestAdd(byte M, byte m, NodeSplitStrategy strategy, int start, int end)
         {
             RTree<Point> rtree = new RTree<Point>(M, m, strategy);
-            for (int i = start; i < end; ++i) rtree.Add(points[i]);
-            AssertBalance<Point>(rtree, M, m);
+            for (int i = start; i < end; ++i)
+            {
+                rtree.Add(points[i]);
+                AssertBalance(rtree, M, m);
+            }
         }
 
         [TestMethod]
