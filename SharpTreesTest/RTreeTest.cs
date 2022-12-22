@@ -163,6 +163,19 @@ namespace SharpTreesTest
                 }
             }
         }
+
+        [TestMethod]
+        [DataRow((byte)0, (byte)4, NodeSplitStrategy.Exhaustive)]
+        [DataRow((byte)1, (byte)4, NodeSplitStrategy.Exhaustive)]
+        [DataRow((byte)2, (byte)3, NodeSplitStrategy.Exhaustive)]
+        [DataRow((byte)3, (byte)4, NodeSplitStrategy.Exhaustive)]
+        [DataRow((byte)3, (byte)5, NodeSplitStrategy.Exhaustive)]
+        [DataRow((byte)0, (byte)1, NodeSplitStrategy.Exhaustive)]
+        [DataRow((byte)1, (byte)2, NodeSplitStrategy.Exhaustive)]
+        public void TestIncorrectLimitsOfEntriesException(byte minEntries, byte maxEntries, NodeSplitStrategy strategy)
+        {
+            Assert.ThrowsException<IncorrectLimitsOfEntriesException>(() => new RTree<Point>(maxEntries, minEntries, strategy));
+        }
     }
 
     internal class Point : IBounded

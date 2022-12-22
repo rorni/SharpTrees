@@ -10,6 +10,11 @@ namespace SharpTrees
         public IncorrectBoundsException(string message) : base(message) { }
     }
 
+    public class IncorrectLimitsOfEntriesException : Exception
+    {
+        public IncorrectLimitsOfEntriesException(string message) : base(message) { }
+    }
+
     /// <summary>
     /// Represents bounds in one direction.
     /// </summary>
@@ -237,7 +242,7 @@ namespace SharpTrees
         /// Searches for items that cross the rectangle. 
         /// </summary>
         /// <param name="target"></param>
-        /// <returns></returns>
+        /// <returns>A collection of items that have intersections with specified bounds.</returns>
         public ICollection<T> SearchIntersections(Bounds[] bounds)
         {
             Rectangle targetRectangle = new Rectangle(bounds);
@@ -317,6 +322,19 @@ namespace SharpTrees
             return result;
         }
         
+        /// <summary>
+        /// Collects data of RTree structure for diagnostics purposes.
+        /// 
+        /// It collects the level of each LeafEntry items (where actual data is stored).
+        /// The length of leafEntryDepth equals to the number of items stored in the RTree.
+        /// All its values must be equal.
+        /// 
+        /// entryCount contains information about the number of entries in each node.
+        /// It is a dictionary of level -> the_number_of_entries_in_each_node_at_the_level.
+        /// All values in the list must be in range from minEntries to maxEntries, except root Node.
+        /// </summary>
+        /// <param name="leafEntryDepth"></param>
+        /// <param name="entryCount"></param>
         internal void CollectDiagnosticsData(out List<int> leafEntryDepth, out Dictionary<int, List<int>> entryCount)
         {
             leafEntryDepth = new List<int>();
@@ -719,6 +737,9 @@ namespace SharpTrees
         }
     }
 
+    /// <summary>
+    /// Strategy to split node during Add operation.
+    /// </summary>
     public enum NodeSplitStrategy
     {
         Exhaustive, Quadratic, Linear
@@ -726,11 +747,23 @@ namespace SharpTrees
 
     internal abstract class NodeSplitter
     {
+        private const string incorrectMinEntriesMessage = "minEntries must not be less than 2. {0} was obtained.";
+        private const string incorrectMaxEntriesMessage = "Inequality maxEntries >= 2 * minEntries must hold. But, minEntries={0}, maxEntries={1}.";
+
         internal uint MinEntries { get; }
         internal uint MaxEntries { get; }
 
         internal NodeSplitter(uint minEntries, uint maxEntries)
         {
+            if (minEntries < 2) {
+                throw new IncorrectLimitsOfEntriesException(
+                    string.Format(incorrectMinEntriesMessage, minEntries));
+            } else if (2 * minEntries > maxEntries)
+            {
+                throw new IncorrectLimitsOfEntriesException(
+                    string.Format(incorrectMaxEntriesMessage, minEntries, maxEntries));
+            }
+
             MinEntries = minEntries;
             MaxEntries = maxEntries;
         }
