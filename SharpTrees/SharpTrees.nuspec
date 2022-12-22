@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>SharpTrees</id>
+    <version>1.0.0</version>
+    <title>SharpTrees</title>
+    <authors>Roman Rodionov</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <!-- <icon>icon.png</icon> -->
+    <projectUrl>http://github.com/rorni/SharpTrees/</projectUrl>
+    <description>Tree structures for .NET Framework</description>
+    <releaseNotes>Initial version.</releaseNotes>
+    <copyright>Copyright (c) 2022 Roman Rodionov</copyright>
+    <tags>R-tree</tags>
+    <readme>README.md</readme>
+  </metadata>
+  <files>
+    <file src="..\README.md" target="."/>
+  </files>
+</package>

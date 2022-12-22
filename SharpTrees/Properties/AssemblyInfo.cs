@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // набора атрибутов. Измените значения этих атрибутов для изменения сведений,
 // связанные со сборкой.
 [assembly: AssemblyTitle("SharpTrees")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Tree structures for .NET")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("SharpTrees")]
-[assembly: AssemblyCopyright("Copyright ©  2022")]
+[assembly: AssemblyCopyright("Copyright © 2022 Roman Rodionov")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
