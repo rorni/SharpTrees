@@ -67,8 +67,12 @@ namespace SharpTreesTest
             RTree<Point> rtree = new RTree<Point>(M, m, strategy);
             for (int i = start; i < end; ++i)
             {
-                rtree.Add(points[i]);
+                Assert.IsTrue(rtree.Add(points[i]));
                 AssertBalance(rtree, M, m);
+            }
+            for (int i = start; i < end; ++i)
+            {
+                Assert.IsFalse(rtree.Add(points[i]));
             }
         }
 
