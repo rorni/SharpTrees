@@ -19,7 +19,8 @@ namespace SharpTreesTest
             {
                 for (int j = 0; j < ny; ++j)
                 {
-                    result[i * nx + j] = new Point(x + i * dx, y + j * dy, h);
+                    int index = i * nx + j;
+                    result[index] = new Point(x + i * dx, y + j * dy, h, index);
                 }
             }
             return result;
@@ -95,6 +96,47 @@ namespace SharpTreesTest
             }
         }
 
+        private List<int> GetPointIndex(double xmin, double xmax, double ymin, double ymax)
+        {
+            List<int> result = new List<int>();
+            for (int i = 0; i < points.Length; ++i)
+            {
+                Point p = points[i];
+                if (p.X >= xmin && p.X <= xmax && p.Y >= ymin && p.Y <= ymax)
+                {
+                    result.Add(i);
+                }
+            }
+            result.Sort();
+            return result;
+        }
+
+        [TestMethod]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 10.5, 20.5, 5.5, 25.5)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, -10.5, -5.5, 5.5, 25.5)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 12.5, 18.5, 5.5, 25.5)]
+        public void TestSearchIntersections(byte M, byte m, NodeSplitStrategy strategy, 
+            double xmin, double xmax, double ymin, double ymax)
+        {
+            RTree<Point> rtree = new RTree<Point>(M, m, strategy);
+            foreach (Point p in points) rtree.Add(p);
+
+            List<int> pointsIndexInside = GetPointIndex(xmin, xmax, ymin, ymax);
+            
+            Bounds[] bounds = new Bounds[] { new Bounds(xmin, xmax), new Bounds(ymin, ymax) };
+            ICollection<Point> foundPoints = rtree.SearchIntersections(bounds);
+
+            List<int> foundIndices = new List<int>();
+            foreach (var p in foundPoints) foundIndices.Add(p.Index);
+            foundIndices.Sort();
+
+            Assert.AreEqual(pointsIndexInside.Count, foundPoints.Count);
+            for (int i = 0; i < pointsIndexInside.Count; ++i)
+            {
+                Assert.AreEqual(pointsIndexInside[i], foundIndices[i]);
+            }
+        }
+
         [TestMethod]
         [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10, 4, 8)]
         [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100, 1, 100)]
@@ -129,11 +171,18 @@ namespace SharpTreesTest
         internal double Y { get; }
         internal double H { get; }
 
+        internal int Index { get; }
+
         internal Point(double x, double y, double h)
         {
             X = x;
             Y = y;
             H = h;
+        }
+
+        internal Point(double x, double y, double h, int index) : this(x, y, h)
+        {
+            Index = index;
         }
 
         public Bounds[] GetBounds()
