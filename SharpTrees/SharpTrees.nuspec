@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>SharpTrees</id>
-    <version>1.0.0</version>
+    <version>1.0.3</version>
     <title>SharpTrees</title>
     <authors>Roman Rodionov</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -10,7 +10,7 @@
     <!-- <icon>icon.png</icon> -->
     <projectUrl>http://github.com/rorni/SharpTrees/</projectUrl>
     <description>Tree structures for .NET Framework</description>
-    <releaseNotes>Initial version.</releaseNotes>
+    <releaseNotes>Fix bug. Bounds members are public now.</releaseNotes>
     <copyright>Copyright (c) 2022 Roman Rodionov</copyright>
     <tags>R-tree</tags>
     <readme>README.md</readme>

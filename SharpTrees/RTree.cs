@@ -23,17 +23,17 @@ namespace SharpTrees
         /// <summary>
         /// Gets lower bound.
         /// </summary>
-        internal double Min { get; }
+        public double Min { get; }
 
         /// <summary>
         /// Gets upper bound.
         /// </summary>
-        internal double Max { get; }
+        public double Max { get; }
 
         /// <summary>
         /// Gets length.
         /// </summary>
-        internal double Length { get => Max - Min; }
+        public double Length { get => Max - Min; }
 
         /// <summary>
         /// Creates Bounds instance.
@@ -42,7 +42,7 @@ namespace SharpTrees
         /// </summary>
         /// <param name="min">Lower bound (minimum).</param>
         /// <param name="max">Upper bound (maximum).</param>
-        internal Bounds(double min, double max)
+        public Bounds(double min, double max)
         {
             if (min > max) throw new IncorrectBoundsException("Lower bound is greater than higher.");
             Min = min;
@@ -54,7 +54,7 @@ namespace SharpTrees
         /// </summary>
         /// <param name="other">Other bounds.</param>
         /// <returns>True, if bounds overlaps.</returns>
-        internal bool IsOverlapping(Bounds other)
+        public bool IsOverlapping(Bounds other)
         {
             if (Max < other.Min || Min > other.Max) return false;
             else return true;
@@ -65,7 +65,7 @@ namespace SharpTrees
         /// </summary>
         /// <param name="other">Other bounds.</param>
         /// <returns>Length of the common interval.</returns>
-        internal double GetOverlappingLength(Bounds other)
+        public double GetOverlappingLength(Bounds other)
         {
             double lower = Math.Max(Min, other.Min);
             double upper = Math.Min(Max, other.Max);
@@ -77,7 +77,7 @@ namespace SharpTrees
         /// </summary>
         /// <param name="other">Other bounds.</param>
         /// <returns>Wide bounds.</returns>
-        internal Bounds Merge(Bounds other)
+        public Bounds Merge(Bounds other)
         {
             double lower = Math.Min(Min, other.Min);
             double upper = Math.Max(Max, other.Max);
