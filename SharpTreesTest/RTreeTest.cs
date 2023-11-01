@@ -80,6 +80,36 @@ namespace SharpTreesTest
         [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10)]
         [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100)]
         [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 900)]
+        public void TestIterator(byte M, byte m, NodeSplitStrategy strategy, int start, int end)
+        {
+            RTree<Point> rtree = new RTree<Point>(M, m, strategy);
+            HashSet<int> allIndices = new HashSet<int>();
+            for (int i = start; i < end; ++i)
+            {
+                rtree.Add(points[i]);
+                allIndices.Add(i);
+            }
+
+            int count = 0;
+            foreach (var entry in rtree)
+            {
+                allIndices.Remove(entry.Index);
+                ++count;
+            }
+            Assert.AreEqual(end - start, count);
+            Assert.AreEqual(0, allIndices.Count);
+        }
+
+        [TestMethod]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900)]
         [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 5, 10)]
         [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 50, 100)]
         [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 300, 900)]

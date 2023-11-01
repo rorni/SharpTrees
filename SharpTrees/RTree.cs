@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections;
 
 namespace SharpTrees
 {
@@ -215,7 +213,7 @@ namespace SharpTrees
         bool IsEqual(IBounded other);
     }
 
-    public class RTree<T> where T : IBounded
+    public class RTree<T> : IEnumerable<T> where T : IBounded
     {
         private Node root;
 
@@ -321,7 +319,20 @@ namespace SharpTrees
             }
             return result;
         }
-        
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            foreach (LeafEntry entry in root)
+            {
+                yield return (T)entry.DataItem;
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
         /// <summary>
         /// Collects data of RTree structure for diagnostics purposes.
         /// 
@@ -341,13 +352,12 @@ namespace SharpTrees
             entryCount = new Dictionary<int, List<int>>();
             root.CollectDiagnosticsData(0, leafEntryDepth, entryCount);
         }
-
     }
 
     /// <summary>
     /// Represents RTree node.
     /// </summary>
-    internal abstract class Node
+    internal abstract class Node : IEnumerable<LeafEntry>
     {
         /// <summary>
         /// Maximum number of entries in the node.
@@ -475,6 +485,13 @@ namespace SharpTrees
         }
 
         internal abstract void CollectDiagnosticsData(int level, List<int> leafEntryDepth, Dictionary<int, List<int>> entryCount);
+        
+        public abstract IEnumerator<LeafEntry> GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 
     /// <summary>
@@ -560,6 +577,11 @@ namespace SharpTrees
             entryCount[level].Add(entries.Count);
 
             leafEntryDepth.Add(level);
+        }
+
+        public override IEnumerator<LeafEntry> GetEnumerator()
+        {
+            return ((IEnumerable<LeafEntry>)entries).GetEnumerator();
         }
     }
 
@@ -703,6 +725,17 @@ namespace SharpTrees
             }
         }
 
+        public override IEnumerator<LeafEntry> GetEnumerator()
+        {
+            foreach (NodeEntry nodeEntry in entries)
+            {
+                Node node = nodeEntry.Node;
+                foreach (LeafEntry entry in node)
+                {
+                    yield return entry;
+                }
+            }
+        }
     }
 
     internal abstract class Entry
