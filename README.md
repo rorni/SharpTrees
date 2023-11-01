@@ -105,3 +105,11 @@ Bounds[] bounds = new Bounds[] { new Bounds(3, 5), new Bounds(4, 6) };
 ICollection<Point> points = rtree.SearchIntersections(Bounds[] bounds); // Finds all points that
               // have bounding rectangles intersecting specified bounds.
 ```
+
+It is possible to iterate over all items contained in the tree.
+
+```
+foreach (Point point in rtree) {
+    Console.WriteLine(String.Format("x={0:f}, y={1:f}", point.X, point.Y);
+}
+```
