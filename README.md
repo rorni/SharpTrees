@@ -110,6 +110,6 @@ It is possible to iterate over all items contained in the tree.
 
 ```
 foreach (Point point in rtree) {
-    Console.WriteLine(String.Format("x={0:f}, y={1:f}", point.X, point.Y);
+    Console.WriteLine(String.Format("x={0:f}, y={1:f}", point.X, point.Y));
 }
 ```
