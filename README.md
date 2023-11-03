@@ -42,9 +42,9 @@ using SharpTrees;
 class Point : IBounded {
     public double X { get; }
     public double Y { get; }
-    private double const delta = 0.01;
+    private const double delta = 0.01;
     
-    Point(double x, double y) {
+    public Point(double x, double y) {
         X = x;
         Y = y;
     }
@@ -61,7 +61,7 @@ class Point : IBounded {
         bool result = false;
         Point otherPoint = other as Point;
         if (otherPoint != null) {
-            result = Math.Abs(X - otherPoint.X) < H && Math.Abs(Y - otherPoint.Y) < H;
+            result = Math.Abs(X - otherPoint.X) == 0 && Math.Abs(Y - otherPoint.Y) == 0;
         }
         return result;
     }
