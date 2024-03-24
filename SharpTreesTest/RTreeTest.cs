@@ -199,6 +199,37 @@ namespace SharpTreesTest
         }
 
         [TestMethod]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)4, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)5, (byte)2, NodeSplitStrategy.Exhaustive, 0, 900)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 10)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 100)]
+        [DataRow((byte)6, (byte)3, NodeSplitStrategy.Exhaustive, 0, 900)]
+        public void TestCount(byte M, byte m, NodeSplitStrategy strategy, int start, int end)
+        {
+            RTree<Point> rtree = new RTree<Point>(M, m, strategy);
+            HashSet<int> allIndices = new HashSet<int>();
+            Assert.AreEqual(0, rtree.Count);
+
+            for (int i = start; i < end; ++i)
+            {
+                rtree.Add(points[i]);
+                allIndices.Add(i);
+                Assert.AreEqual(allIndices.Count, rtree.Count);
+            }
+
+            for (int i = start; i < end; ++i)
+            {
+                rtree.Delete(points[i], out var _);
+                allIndices.Remove(i);
+                Assert.AreEqual(allIndices.Count, rtree.Count);
+            }
+        }
+
+        [TestMethod]
         [DataRow((byte)0, (byte)4, NodeSplitStrategy.Exhaustive)]
         [DataRow((byte)1, (byte)4, NodeSplitStrategy.Exhaustive)]
         [DataRow((byte)2, (byte)3, NodeSplitStrategy.Exhaustive)]

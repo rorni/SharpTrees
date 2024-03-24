@@ -328,6 +328,16 @@ namespace SharpTrees
             }
         }
 
+        /// <summary>
+        /// Returns the number of elements stored in the tree.
+        /// </summary>
+        public int Count { 
+            get
+            {
+                return root.CountItems();
+            } 
+        }
+
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
@@ -398,6 +408,12 @@ namespace SharpTrees
         /// <param name="target">The target entry to be added.</param>
         /// <returns>Extra node if the node was splitted. null otherwise.</returns>
         internal abstract Node AddItem(LeafEntry target);
+
+        /// <summary>
+        /// Counts the number of items stored in the Node or its descendants.
+        /// </summary>
+        /// <returns>The number of items.</returns>
+        internal abstract int CountItems();
 
         /// <summary>
         /// Deletes target from the Node. 
@@ -571,6 +587,11 @@ namespace SharpTrees
             return null;
         }
 
+        internal override int CountItems()
+        {
+            return entries.Count;
+        }
+
         internal override void CollectDiagnosticsData(int level, List<int> leafEntryDepth, Dictionary<int, List<int>> entryCount)
         {
             if (!entryCount.ContainsKey(level)) entryCount.Add(level, new List<int>());
@@ -692,6 +713,16 @@ namespace SharpTrees
                 }
             }
             toAdd.AdjustRectangle();
+            return result;
+        }
+
+        internal override int CountItems()
+        {
+            int result = 0;
+            foreach (var entry in entries)
+            {
+                result += entry.Node.CountItems();
+            }
             return result;
         }
 
