@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>SharpTrees</id>
-    <version>1.0.4</version>
+    <version>1.0.5</version>
     <title>SharpTrees</title>
     <authors>Roman Rodionov</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -11,7 +11,7 @@
     <projectUrl>http://github.com/rorni/SharpTrees/</projectUrl>
     <description>Tree structures for .NET Framework</description>
     <releaseNotes>RTree implements IEnumerable interface.</releaseNotes>
-    <copyright>Copyright (c) 2023 Roman Rodionov</copyright>
+    <copyright>Copyright (c) 2024 Roman Rodionov</copyright>
     <tags>R-tree</tags>
     <readme>README.md</readme>
   </metadata>

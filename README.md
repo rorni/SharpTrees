@@ -61,7 +61,8 @@ class Point : IBounded {
         bool result = false;
         Point otherPoint = other as Point;
         if (otherPoint != null) {
-            result = Math.Abs(X - otherPoint.X) == 0 && Math.Abs(Y - otherPoint.Y) == 0;
+            result = Math.Abs(X - otherPoint.X) == 0 && 
+                     Math.Abs(Y - otherPoint.Y) == 0;
         }
         return result;
     }
@@ -111,5 +112,16 @@ It is possible to iterate over all items contained in the tree.
 ```
 foreach (Point point in rtree) {
     Console.WriteLine(String.Format("x={0:f}, y={1:f}", point.X, point.Y));
+}
+```
+
+To get the total number of elements stored in the RTree property `Count` can be used:
+
+```
+int n = rtree.Count;  // Get the total number of elements in the rtree
+
+// Check if the rtree is empty
+if (rtree.Count == 0) {
+    // Do something
 }
 ```
